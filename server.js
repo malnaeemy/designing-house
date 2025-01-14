@@ -1,7 +1,6 @@
 /************************************************************
  server.js (معدّل وكامل مع المهام tasks)
  خادم محلي باستخدام Node.js + Express + Multer + Archiver
- (منفذ 3003)
  - يقدّم الملفات الثابتة (HTML, CSS, JS) بعد التحقق من الجلسة
  - يرفع الملفات المضغوطة (POST /upload-zip)
  - يولّد ملفات مضغوطة عند الطلب (POST /download-customers-zips)
@@ -9,10 +8,10 @@
  - يمكّن التذكيرات (reminders)
  - يستخدم id كمعرّف رئيسي للزبون
  - أضفنا folderName عند وضع الزبون في مجلد
- - أضفنا نظام تسجيل دخول بسيط لمستخدمين admin و Engsamar
+ - أضفنا نظام تسجيل دخول بسيط لمستخدمين admin و Engsamar (أو غيرهما)
  - أضفنا منطق orders (تخزين الطلبات) + مسار /api/orders
  - أضفنا /api/reports لعرض الزبائن المتكررين وغير النشطين
- - تم إضافة /api/tasks لإدارة المهام (حل مشكلة 404)
+ - تم إضافة /api/tasks لإدارة المهام
 *************************************************************/
 
 const express = require('express');
@@ -26,6 +25,7 @@ const archiver = require('archiver');
 const session = require('express-session');
 
 const app = express();
+/* قراءة المنفذ من process.env.PORT وإلا 3003 */
 const PORT = process.env.PORT || 3003;
 
 /* 2) مستخدمان فقط مصرح لهما بالدخول */
@@ -69,16 +69,16 @@ app.get('/logout', (req, res) => {
   });
 });
 
-/* 3) فاصل: مسار ثابت لصفحة login.html */
+/* 3) مسار ثابت لصفحة login.html */
 app.use('/login.html', express.static(path.join(__dirname, 'login.html')));
 
 /* 4) ميدل وير يتحقق من الجلسة لأي طلب آخر */
 app.use((req, res, next) => {
-  // السماح إذا المستخدم مسجل دخول
+  // السماح إذا كان المستخدم مسجَّل دخوله
   if (req.session.loggedIn) {
     return next();
   }
-  // السماح لمسار /login (POST) ولصفحة /login.html
+  // السماح لمسار /login (POST) ولصفحة /login.html فقط
   const allowList = [
     '/login',     // POST
     '/login.html' // GET
@@ -104,7 +104,6 @@ function loadDataFromJson() {
       dailyFolders: Array.isArray(data.dailyFolders) ? data.dailyFolders : [],
       reminders: Array.isArray(data.reminders) ? data.reminders : [],
       orders: Array.isArray(data.orders) ? data.orders : [],
-      // إضافة tasks
       tasks: Array.isArray(data.tasks) ? data.tasks : []
     };
   } catch (err) {
@@ -353,13 +352,11 @@ app.put('/api/reminders/:id', (req, res) => {
 app.post('/api/orders', (req, res) => {
   const { customerId, orderType, date } = req.body;
 
-  // تأكد أن الزبون موجود
   const cIndex = customers.findIndex(c => c.id === Number(customerId));
   if (cIndex === -1) {
     return res.status(404).json({ error: 'الزبون غير موجود!' });
   }
 
-  // أنشئ معرّف (id) للطلب
   const maxOrderId = orders.reduce((m, o) => Math.max(m, o.id || 0), 0);
   const newOrderId = maxOrderId + 1;
 
@@ -430,7 +427,6 @@ app.get('/api/reports', (req, res) => {
 });
 
 /* ============== منطق المهام (Tasks) ============== */
-// لحل مشكلة 404، أضفنا المسارات التالية:
 app.get('/api/tasks', (req, res) => {
   res.json(tasks);
 });
@@ -483,7 +479,7 @@ app.get('/', (req, res) => {
   res.send('مرحباً! لقد سجلت الدخول بنجاح، ويمكنك الوصول لباقي الصفحات الآن.');
 });
 
-/* بدء الخادم */
+/* بدء الخادم على المنفذ (PORT) من البيئة أو 3003 */
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
