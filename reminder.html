@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>المهام والتذكيرات</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link 
+    href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap"
+    rel="stylesheet"
+  >
+  <link 
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+  />
+  <!-- لو لديك ملف style.css -->
+  <link rel="stylesheet" href="style.css">
+
+  <style>
+    /* خلفية وتنسيق عام */
+    body {
+      background: #234f7e; /* خلفية زرقاء */
+      color: #fff;
+      margin: 0;
+      font-family: 'Tajawal', sans-serif;
+    }
+    nav.navbar {
+      background: #000;
+      padding: 1rem;
+    }
+    nav ul.nav-menu {
+      display: flex;
+      gap: 1rem;
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+    nav ul li a {
+      color: #fff;
+      text-decoration: none;
+    }
+
+    /* الحاوية الرئيسية (flex) */
+    main {
+      display: flex;
+      gap: 2rem;
+      padding: 1.5rem;
+      max-width: 1200px;
+      margin: auto; /* توسيط أفقياً */
+    }
+    section {
+      flex: 1;
+      background: #1c1c1c; 
+      padding: 1rem; 
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    }
+    section h2 {
+      margin-bottom: 1rem;
+      color: #fff;
+    }
+    /* النماذج */
+    form {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+    form input {
+      flex: 1 1 300px;
+      padding: 0.5rem;
+      border: 1px solid #444;
+      border-radius: 4px;
+      background: #333;
+      color: #fff;
+    }
+    form button {
+      padding: 0.6rem 1.2rem;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .btn-blue {
+      background: #007bff;
+      color: #fff;
+    }
+    .btn-green {
+      background: #28a745;
+      color: #fff;
+    }
+    .btn-red {
+      background: #e74c3c;
+      color: #fff;
+    }
+    .btn-gray {
+      background: #555;
+      color: #fff;
+    }
+    button:hover {
+      opacity: 0.9;
+    }
+    /* الجداول */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #2e2e2e;
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    thead tr {
+      background: #444;
+      color: #fff;
+    }
+    th, td {
+      padding: 0.6rem 0.8rem;
+      border-bottom: 1px solid #555;
+      text-align: center;
+    }
+    th {
+      font-weight: 700;
+    }
+    td button {
+      margin: 0 0.3rem;
+    }
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+  </style>
+</head>
+<body>
+  <nav class="navbar" style="background:#000; padding:1rem;">
+    <ul class="nav-menu" style="display:flex; gap:1rem; list-style:none; margin:0;">
+      <li><a href="index.html" style="color:#fff; text-decoration:none;">
+        <i class="fa fa-home"></i>الرئيسية</a>
+      </li>
+      <li><a href="customers.html" style="color:#fff; text-decoration:none;">
+        <i class="fa fa-users"></i>الزبائن</a>
+      </li>
+      <li><a href="dailyfile.html" style="color:#fff; text-decoration:none;">
+        <i class="fa fa-file-alt"></i>ملف اليوم</a>
+      </li>
+      <li><a href="printing.html" style="color:#fff; text-decoration:none;">
+        <i class="fa fa-print"></i>قيد الطبع</a>
+      </li>
+      <li><a href="shipped.html" style="color:#fff; text-decoration:none;">
+        <i class="fa fa-shipping-fast"></i>شُحنت</a>
+      </li>
+      <li><a href="archive.html" style="color:#fff; text-decoration:none;">
+        <i class="fa fa-archive"></i>الأرشيف</a>
+      </li>
+      <li><a href="reminder.html" style="color:#fff; text-decoration:none; font-weight:bold;">
+        <i class="fa fa-bell"></i>المهام و التذكير</a>
+      </li>
+    </ul>
+  </nav>
+
+  <main>
+    <!-- القسم الأيسر: المهام -->
+    <section>
+      <h2>المهام</h2>
+      <form id="addTaskForm">
+        <input 
+          type="text"
+          id="taskTitle"
+          placeholder="اسم المهمة..."
+          required
+        >
+        <input 
+          type="text"
+          id="taskNotes"
+          placeholder="ملاحظات..."
+        >
+        <button type="submit" class="btn-green">إضافة</button>
+      </form>
+
+      <table>
+        <thead>
+          <tr>
+            <th>اسم المهمة</th>
+            <th>ملاحظات</th>
+            <th>أُنجزت؟</th>
+            <th>إجراءات</th>
+          </tr>
+        </thead>
+        <tbody id="taskTableBody"></tbody>
+      </table>
+    </section>
+
+    <!-- القسم الأيمن: التذكيرات -->
+    <section>
+      <h2>التذكيرات</h2>
+      <form id="addReminderForm">
+        <input 
+          type="text" 
+          id="reminderText" 
+          placeholder="اكتب التذكير هنا..." 
+          required
+        >
+        <button type="submit" class="btn-blue">أضف</button>
+      </form>
+      <table>
+        <thead>
+          <tr>
+            <th>التذكرة</th>
+            <th>النص</th>
+            <th>منجز؟</th>
+            <th>إجراءات</th>
+          </tr>
+        </thead>
+        <tbody id="reminderTableBody"></tbody>
+      </table>
+    </section>
+  </main>
+
+  <script>
+    /* ================== منطق المهام ================== */
+    const addTaskForm = document.getElementById('addTaskForm');
+    const taskTableBody = document.getElementById('taskTableBody');
+    let tasks = [];
+
+    // (A) جلب المهام من السيرفر
+    async function fetchTasks() {
+      try {
+        const res = await fetch('http://localhost:3003/api/tasks');
+        if (!res.ok) throw new Error('فشل جلب المهام');
+        tasks = await res.json();
+        displayTasks();
+      } catch (err) {
+        console.error(err);
+        taskTableBody.innerHTML = `
+          <tr><td colspan="4" style="color:red;">فشل تحميل المهام</td></tr>
+        `;
+      }
+    }
+
+    // (B) عرض المهام في الجدول
+    function displayTasks() {
+      taskTableBody.innerHTML = '';
+      if (!tasks.length) {
+        taskTableBody.innerHTML = `
+          <tr><td colspan="4">لا توجد مهام حاليًا</td></tr>
+        `;
+        return;
+      }
+
+      tasks.forEach(t => {
+        const row = document.createElement('tr');
+
+        // اسم المهمة
+        const titleTd = document.createElement('td');
+        titleTd.textContent = t.title;
+        row.appendChild(titleTd);
+
+        // الملاحظات
+        const notesTd = document.createElement('td');
+        notesTd.textContent = t.notes || '';
+        row.appendChild(notesTd);
+
+        // خلية أُنجزت؟
+        const doneTd = document.createElement('td');
+        doneTd.textContent = t.done ? '✓' : 'لا';
+        row.appendChild(doneTd);
+
+        // خلية الإجراءات (حذف + أنجزت)
+        const actionsTd = document.createElement('td');
+
+        // زر أنجزت
+        const doneBtn = document.createElement('button');
+        doneBtn.textContent = 'أنجزت';
+        doneBtn.className = 'btn-green';
+        doneBtn.style.marginRight = '0.4rem';
+        doneBtn.addEventListener('click', () => markDone(t.id));
+        actionsTd.appendChild(doneBtn);
+
+        // زر حذف
+        const delBtn = document.createElement('button');
+        delBtn.textContent = 'حذف';
+        delBtn.className = 'btn-red';
+        delBtn.addEventListener('click', () => deleteTask(t.id));
+        actionsTd.appendChild(delBtn);
+
+        row.appendChild(actionsTd);
+        taskTableBody.appendChild(row);
+      });
+    }
+
+    // (C) إضافة مهمة
+    addTaskForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const titleVal = document.getElementById('taskTitle').value.trim();
+      const notesVal = document.getElementById('taskNotes').value.trim();
+      if (!titleVal) return;
+
+      const newTask = {
+        title: titleVal,
+        notes: notesVal,
+        done: false
+      };
+
+      try {
+        const res = await fetch('http://localhost:3003/api/tasks', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(newTask)
+        });
+        if (!res.ok) throw new Error('فشل إضافة المهمة');
+        await res.json();
+        addTaskForm.reset();
+        fetchTasks();
+      } catch (err) {
+        console.error(err);
+        alert('تعذّر إضافة المهمة');
+      }
+    });
+
+    // (D) وسم المهمة بأنها منجزة
+    async function markDone(taskId) {
+      try {
+        const res = await fetch(`http://localhost:3003/api/tasks/${taskId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ done: true })
+        });
+        if (!res.ok) throw new Error('فشل تعديل المهمة كمنجزة');
+        await res.json();
+        fetchTasks();
+      } catch (err) {
+        console.error(err);
+        alert('تعذّر وضع المهمة كمنجزة');
+      }
+    }
+
+    // (E) حذف المهمة
+    async function deleteTask(taskId) {
+      const confirmDel = confirm('هل تريد حذف هذه المهمة؟');
+      if (!confirmDel) return;
+      try {
+        const res = await fetch(`http://localhost:3003/api/tasks/${taskId}`, {
+          method: 'DELETE'
+        });
+        if (!res.ok) throw new Error('فشل حذف المهمة');
+        await res.json();
+        fetchTasks();
+      } catch (err) {
+        console.error(err);
+        alert('تعذّر حذف المهمة');
+      }
+    }
+
+    // عند تحميل الصفحة
+    fetchTasks();
+  </script>
+
+  <script>
+    /* ================== منطق التذكيرات ================== */
+    const addReminderForm = document.getElementById('addReminderForm');
+    const reminderTextInput = document.getElementById('reminderText');
+    const reminderTableBody = document.getElementById('reminderTableBody');
+    let reminders = [];
+
+    async function fetchReminders() {
+      try {
+        const res = await fetch('http://localhost:3003/api/reminders');
+        reminders = await res.json();
+        displayReminders();
+      } catch (err) {
+        console.error(err);
+        alert('تعذّر جلب التذكيرات من السيرفر');
+      }
+    }
+
+    function displayReminders() {
+      reminderTableBody.innerHTML = '';
+      if (!reminders.length) {
+        reminderTableBody.innerHTML = `
+          <tr><td colspan="4">لا توجد تذكيرات حالياً</td></tr>
+        `;
+        return;
+      }
+      reminders.forEach(r => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${r.id}</td>
+          <td>${r.text}</td>
+          <td>${r.done ? 'نعم' : 'لا'}</td>
+          <td>
+            <button class="btn-red" onclick="deleteReminder(${r.id})">حذف</button>
+            <button class="btn-gray" onclick="toggleDone(${r.id}, ${r.done ? 'false' : 'true'})">
+              ${r.done ? 'أرجعه لغير منجز' : 'منجز'}
+            </button>
+          </td>
+        `;
+        reminderTableBody.appendChild(row);
+      });
+    }
+
+    addReminderForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const txt = reminderTextInput.value.trim();
+      if (!txt) return;
+
+      const newR = { text: txt, done: false };
+      try {
+        const res = await fetch('http://localhost:3003/api/reminders', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(newR)
+        });
+        if (!res.ok) throw new Error('فشل إضافة التذكير');
+        await res.json();
+        addReminderForm.reset();
+        fetchReminders();
+      } catch (err) {
+        console.error(err);
+        alert('تعذّر إضافة التذكير');
+      }
+    });
+
+    async function deleteReminder(id) {
+      try {
+        const res = await fetch(`http://localhost:3003/api/reminders/${id}`, {
+          method: 'DELETE'
+        });
+        if (!res.ok) throw new Error('فشل حذف التذكير');
+        await res.json();
+        fetchReminders();
+      } catch (err) {
+        console.error(err);
+        alert('تعذّر حذف التذكير');
+      }
+    }
+
+    async function toggleDone(id, newDone) {
+      try {
+        const res = await fetch(`http://localhost:3003/api/reminders/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ done: newDone })
+        });
+        if (!res.ok) throw new Error('فشل تعديل التذكير');
+        await res.json();
+        fetchReminders();
+      } catch (err) {
+        console.error(err);
+        alert('تعذّر تعديل التذكير');
+      }
+    }
+
+    fetchReminders();
+  </script>
+
+</body>
+</html>

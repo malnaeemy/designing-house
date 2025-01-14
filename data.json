@@ -1,0 +1,32 @@
+{
+  "customers": [
+    {
+      "name": "محمد",
+      "phone": "07834006614",
+      "address": "اليرموك",
+      "notes": "",
+      "zipName": "",
+      "status": "notDistributed",
+      "activityLog": [],
+      "id": 1
+    }
+  ],
+  "dailyFolders": [],
+  "reminders": [
+    {
+      "text": "محمد هذا الرقم",
+      "done": true,
+      "id": 1
+    }
+  ],
+  "orders": [],
+  "tasks": [
+    {
+      "id": 1,
+      "title": "تصميم",
+      "status": "pending",
+      "dueDate": "",
+      "done": true
+    }
+  ]
+}

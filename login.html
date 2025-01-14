@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>تسجيل الدخول</title>
+  <!-- الخط الذي تستخدمه عادةً في الموقع -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link 
+    href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap"
+    rel="stylesheet"
+  >
+  <!-- Animate.css (اختياري إن أردت مؤثرات) -->
+  <link 
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"
+  />
+  <style>
+    /* الخط */
+    body {
+      font-family: 'Tajawal', sans-serif;
+      background: #1f4f82; /* خلفية زرقاء كحلي */
+      margin: 0;
+      padding: 0;
+      color: #333;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh; /* ملء الشاشة */
+    }
+
+    .login-container {
+      background: #fff;
+      width: 350px;
+      padding: 2rem;
+      border-radius: 10px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+      text-align: center;
+      /* تأثير دخول بسيط باستخدام Animate.css */
+      animation: fadeInDown 0.8s;
+    }
+
+    /* عنوان الصفحة */
+    .login-container h2 {
+      margin-bottom: 1.5rem;
+      color: #2d74d4; /* درجة من الأزرق لتناسق */
+      font-weight: 700;
+      font-size: 1.4rem;
+    }
+
+    /* الحقول */
+    .login-input {
+      width: 90%;
+      margin: 0.5rem auto;
+      padding: 0.6rem;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 1rem;
+      outline: none;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+      display: block; /* لجعله في سطر مستقل */
+    }
+    .login-input:focus {
+      border-color: #2d74d4;
+      box-shadow: 0 0 3px rgba(45,116,212,0.3);
+    }
+
+    /* زر الدخول */
+    .login-button {
+      background: #28a745; 
+      color: #fff;
+      border: none;
+      font-size: 1rem;
+      font-weight: bold;
+      padding: 0.7rem 1.2rem;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-top: 1rem;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+      transition: background-color 0.3s ease, transform 0.2s ease;
+    }
+    .login-button:hover {
+      background-color: #218838;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    }
+
+    /* رسالة الخطأ */
+    #errorMsg {
+      color: red;
+      margin-top: 1rem;
+      min-height: 1.2rem; /* كي لا تتحرك العناصر */
+    }
+
+    /* مؤثر دخول بسيط (بدون Animate.css) 
+       يمكنك إزالته إن استخدمت animate.css 
+    */
+    @keyframes fadeInDown {
+      from {
+        opacity: 0;
+        transform: translateY(-30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* لجعل التصميم أفضل على الشاشات الصغيرة */
+    @media (max-width: 480px) {
+      .login-container {
+        width: 90%;
+        margin: 0 1rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="login-container">
+    <h2>تسجيل الدخول</h2>
+    <form id="loginForm">
+      <input type="text" id="username" class="login-input" placeholder="اسم المستخدم" required>
+      <input type="password" id="password" class="login-input" placeholder="كلمة المرور" required>
+      <button type="submit" class="login-button">دخول</button>
+    </form>
+
+    <p id="errorMsg"></p>
+  </div>
+
+  <script>
+    const loginForm = document.getElementById('loginForm');
+    const errorMsg = document.getElementById('errorMsg');
+
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value.trim();
+
+      try {
+        const res = await fetch('/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+        if (res.ok) {
+          window.location.href = '/index.html'; // التوجيه للصفحة الرئيسية
+        } else {
+          const data = await res.json();
+          errorMsg.textContent = data.error || 'بيانات دخول خاطئة';
+        }
+      } catch (err) {
+        errorMsg.textContent = 'تعذّر الاتصال بالخادم';
+      }
+    });
+  </script>
+</body>
+</html>
