@@ -26,11 +26,11 @@ const archiver = require('archiver');
 const session = require('express-session');
 
 const app = express();
-const PORT = 3003;
+const PORT = process.env.PORT || 3003;
 
 /* 2) مستخدمان فقط مصرح لهما بالدخول */
 const validUsers = [
-  { username: 'admin', password: '1234' },
+  { username: 'malnaeemy', password: '0991481846' },
   { username: 'Engsamar', password: '19931028' }
 ];
 
@@ -485,5 +485,5 @@ app.get('/', (req, res) => {
 
 /* بدء الخادم */
 app.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });
