@@ -3,15 +3,17 @@
   يعرض الزبائن الذين حالتهم "inPrinting"
   مع إمكانية نقلهم إلى "shipped"
   - نستخدم id بدل phone للتمييز
-  - ترتيب الأعمدة وفق: [اسم الزبون, رقم الهاتف, الحالة, الإجراءات]
 ***********************************************************/
+
+/* استبدل هذا بعنوان موقعك على Railway */
+const BASE_URL = "https://designing-house-production.up.railway.app";
 
 let customers = [];
 const printingTableBody = document.getElementById('printingTableBody');
 
 async function fetchCustomers() {
   try {
-    const res = await fetch('http://localhost:3003/api/customers');
+    const res = await fetch(`${BASE_URL}/api/customers`);
     customers = await res.json();
     displayPrintingCustomers();
   } catch (err) {
@@ -28,16 +30,9 @@ function displayPrintingCustomers() {
   printingCustomers.forEach(cust => {
     const row = document.createElement('tr');
     row.innerHTML = `
-      <!-- العمود الأول: اسم الزبون -->
       <td>${cust.name}</td>
-
-      <!-- العمود الثاني: رقم الهاتف -->
       <td>${cust.phone}</td>
-
-      <!-- العمود الثالث: الحالة -->
       <td>${cust.status}</td>
-
-      <!-- العمود الرابع: الإجراءات -->
       <td>
         <button class="btn-stage btn-ship" onclick="moveToShipped(${cust.id})">
           <i class="fa fa-shipping-fast"></i> انقل إلى شُحنت
@@ -63,7 +58,7 @@ async function moveToShipped(custId) {
   });
 
   try {
-    const res = await fetch(`http://localhost:3003/api/customers/${custId}`, {
+    const res = await fetch(`${BASE_URL}/api/customers/${custId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updated)

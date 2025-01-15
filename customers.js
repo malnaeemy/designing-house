@@ -6,6 +6,9 @@
   - الإصلاح: استدعاء المسار بالحقل id بدل phone عند الحذف
 ***********************************************************/
 
+/* استبدل هذا بعنوان موقعك على Railway */
+const BASE_URL = "https://designing-house-production.up.railway.app";
+
 // مراجع لعناصر HTML
 const addCustomerForm = document.getElementById('addCustomerForm');
 const customerTableBody = document.getElementById('customerTableBody');
@@ -26,7 +29,7 @@ let finalZipName = '';
  */
 async function fetchCustomers() {
   try {
-    const res = await fetch('http://localhost:3003/api/customers');
+    const res = await fetch(`${BASE_URL}/api/customers`);
     customers = await res.json(); 
     displayCustomers(); 
   } catch (err) {
@@ -40,9 +43,7 @@ async function fetchCustomers() {
  *    يمكن استلام قائمة مفلترة لعرضها، وإلّا يتم عرض القائمة الرئيسية
  */
 function displayCustomers(list) {
-  // لو وصلنا لائحة مفلترة، نعرضها، وإلا نعرض customers كامل
   const baseList = list || customers;
-  // نعرض فقط من حالته "notDistributed"
   const filteredList = baseList.filter(c => c.status === 'notDistributed');
 
   customerTableBody.innerHTML = '';
@@ -79,7 +80,7 @@ async function addCustomer(name, phone, address, notes, zipName) {
       activityLog: []
     };
 
-    const res = await fetch('http://localhost:3003/api/customers', {
+    const res = await fetch(`${BASE_URL}/api/customers`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(newC)
@@ -91,8 +92,6 @@ async function addCustomer(name, phone, address, notes, zipName) {
 
     const data = await res.json();
     console.log('Customer added:', data);
-
-    // بعد الإضافة، نجلب القائمة مجددًا
     fetchCustomers();
 
   } catch (err) {
@@ -103,17 +102,14 @@ async function addCustomer(name, phone, address, notes, zipName) {
 
 /**
  * 4) دالة لحذف زبون عبر DELETE
- *    - نستخدم now الزبون id في الرابط بدل الهاتف
  */
 async function deleteCustomer(index) {
-  // نستخرج الزبون المستهدف من الحالة "notDistributed"
   const filteredList = customers.filter(c => c.status === "notDistributed");
   const c = filteredList[index];
   if (!c) return;
 
   try {
-    // نستخدم c.id بدل c.phone في الرابط
-    const res = await fetch(`http://localhost:3003/api/customers/${c.id}`, {
+    const res = await fetch(`${BASE_URL}/api/customers/${c.id}`, {
       method: 'DELETE'
     });
     if (!res.ok) {
@@ -121,10 +117,7 @@ async function deleteCustomer(index) {
     }
     const data = await res.json();
     console.log('Deleted:', data);
-
-    // أعد جلب القائمة
     fetchCustomers();
-
   } catch (err) {
     console.error(err);
     alert('تعذّر حذف الزبون');
@@ -139,7 +132,6 @@ async function editCustomer(index) {
   const oldC = filteredList[index];
   if (!oldC) return;
 
-  // نبحث عن الزبون في المصفوفة الأصلية
   const mainIndex = customers.findIndex(x => x.id === oldC.id);
   if (mainIndex === -1) return;
 
@@ -161,8 +153,7 @@ async function editCustomer(index) {
   };
 
   try {
-    // استدعاء PUT مع تمرير oldC.id
-    const res = await fetch(`http://localhost:3003/api/customers/${oldC.id}`, {
+    const res = await fetch(`${BASE_URL}/api/customers/${oldC.id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updatedC)
@@ -172,10 +163,7 @@ async function editCustomer(index) {
     }
     const data = await res.json();
     console.log('Edited:', data);
-
-    // بعد التعديل، أعد جلب القائمة
     fetchCustomers();
-
   } catch (err) {
     console.error(err);
     alert('تعذّر تعديل الزبون');
@@ -194,7 +182,6 @@ addCustomerForm.addEventListener('submit', (e) => {
 
   addCustomer(name, phone, address, notes, finalZipName);
 
-  // تنظيف النموذج
   addCustomerForm.reset();
   selectedFolderFiles = [];
   finalZipName = '';
@@ -235,7 +222,7 @@ uploadZipBtn.addEventListener('click', async () => {
   formData.append('zipfile', zipBlob, finalZipName);
 
   try {
-    const res = await fetch('http://localhost:3003/upload-zip', {
+    const res = await fetch(`${BASE_URL}/upload-zip`, {
       method: 'POST',
       body: formData
     });

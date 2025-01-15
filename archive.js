@@ -7,6 +7,9 @@
   - تمت إضافة عمود "الملاحظات" للعرض
 ***********************************************************/
 
+/* استبدل هذا بعنوان موقعك على Railway */
+const BASE_URL = "https://designing-house-production.up.railway.app";
+
 let customers = [];
 const archiveTableBody = document.getElementById('archiveTableBody');
 const searchArchivedInput = document.getElementById('searchArchivedInput');
@@ -14,7 +17,7 @@ const searchArchivedInput = document.getElementById('searchArchivedInput');
 /* 1) جلب قائمة الزبائن */
 async function fetchCustomers() {
   try {
-    const res = await fetch('http://localhost:3003/api/customers');
+    const res = await fetch(`${BASE_URL}/api/customers`);
     customers = await res.json();
     displayArchivedCustomers();
   } catch (err) {
@@ -72,7 +75,7 @@ async function reactivateCustomer(id) {
   });
 
   try {
-    const res = await fetch(`http://localhost:3003/api/customers/${id}`, {
+    const res = await fetch(`${BASE_URL}/api/customers/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updated)

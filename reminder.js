@@ -3,8 +3,11 @@
   - جلب التذكيرات من السيرفر (GET /api/reminders)
   - إضافة تذكير جديد (POST /api/reminders)
   - حذف تذكير (DELETE /api/reminders/:id)
-  - (اختياري) تعديل تذكير (PUT /api/reminders/:id)
+  - تعديل التذكير (PUT /api/reminders/:id) لقلب done
 ***************************************************************/
+
+/* استبدل هذا بعنوان موقعك على Railway */
+const BASE_URL = "https://designing-house-production.up.railway.app";
 
 const addReminderForm = document.getElementById('addReminderForm');
 const reminderTextInput = document.getElementById('reminderText');
@@ -16,7 +19,7 @@ let reminders = [];
 /* 1) جلب جميع التذكيرات */
 async function fetchReminders() {
   try {
-    const res = await fetch('http://localhost:3003/api/reminders');
+    const res = await fetch(`${BASE_URL}/api/reminders`);
     reminders = await res.json();
     displayReminders();
   } catch (err) {
@@ -34,9 +37,7 @@ function displayReminders() {
     row.innerHTML = `
       <td>${r.id}</td>
       <td>${r.text}</td>
-      <td>
-        ${r.done ? 'نعم' : 'لا'}
-      </td>
+      <td>${r.done ? 'نعم' : 'لا'}</td>
       <td>
         <button class="delete-btn" onclick="deleteReminder(${r.id})">حذف</button>
         <button class="edit-btn" onclick="toggleDone(${r.id}, ${r.done ? 'false' : 'true'})">
@@ -54,26 +55,20 @@ addReminderForm.addEventListener('submit', async (e) => {
   const txt = reminderTextInput.value.trim();
   if (!txt) return;
 
-  // يمكنك إضافة أي حقول أخرى، مثلاً {text: txt, date: ..., done: false}
   const newReminder = {
     text: txt,
     done: false
   };
 
   try {
-    const res = await fetch('http://localhost:3003/api/reminders', {
+    const res = await fetch(`${BASE_URL}/api/reminders`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(newReminder)
     });
-    if (!res.ok) {
-      throw new Error('فشل إضافة التذكير');
-    }
-    const data = await res.json();
-    console.log('Reminder added:', data);
-
+    if (!res.ok) throw new Error('فشل إضافة التذكير');
+    await res.json();
     addReminderForm.reset();
-    // بعد الإضافة، أعد جلب القائمة
     fetchReminders();
   } catch (err) {
     console.error(err);
@@ -84,16 +79,11 @@ addReminderForm.addEventListener('submit', async (e) => {
 /* 4) حذف تذكير */
 async function deleteReminder(id) {
   try {
-    const res = await fetch(`http://localhost:3003/api/reminders/${id}`, {
+    const res = await fetch(`${BASE_URL}/api/reminders/${id}`, {
       method: 'DELETE'
     });
-    if (!res.ok) {
-      throw new Error('فشل حذف التذكير');
-    }
-    const data = await res.json();
-    console.log('Deleted reminder:', data);
-
-    // بعد الحذف، أعد الجلب
+    if (!res.ok) throw new Error('فشل حذف التذكير');
+    await res.json();
     fetchReminders();
   } catch (err) {
     console.error(err);
@@ -101,22 +91,16 @@ async function deleteReminder(id) {
   }
 }
 
-/* 5) تعديل التذكير (مثلاً قلب حقل done) */
+/* 5) تعديل التذكير (قلب حقل done) */
 async function toggleDone(id, newDone) {
-  // newDone = true/false
   try {
-    const res = await fetch(`http://localhost:3003/api/reminders/${id}`, {
+    const res = await fetch(`${BASE_URL}/api/reminders/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ done: newDone })
     });
-    if (!res.ok) {
-      throw new Error('فشل تعديل التذكير');
-    }
-    const data = await res.json();
-    console.log('Updated reminder:', data);
-
-    // أعد الجلب
+    if (!res.ok) throw new Error('فشل تعديل التذكير');
+    await res.json();
     fetchReminders();
   } catch (err) {
     console.error(err);
