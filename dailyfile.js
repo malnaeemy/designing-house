@@ -1,18 +1,17 @@
 /***************************************************************
   dailyfile.js
-  - يعرض/ينشئ مجلدات اليوم (dailyFolders) من السيرفر
-  - إضافة زبون إلى المجلد (تغيير حالته إلى dailyFile)
+  - يعرض/ينشئ مجلدات اليوم (dailyFolders)
+  - إضافة زبون إلى المجلد (dailyFile)
   - نقل الزبون من dailyFile إلى inPrinting
-  - ينفذ تنزيلًا حقيقيًا لملفات عبر /download-customers-zips
+  - تحميل ملفات جميع الزبائن في المجلد
 ***************************************************************/
 
-/* استبدل هذا بعنوان موقعك على Railway */
 const BASE_URL = "https://designing-house-production.up.railway.app";
 
 let allCustomers = [];
 let dailyFolders = [];
 
-// مراجع العناصر
+// مراجع الصفحة
 const addFolderForm = document.getElementById('addFolderForm');
 const folderNameInput = document.getElementById('folderName');
 const folderDateInput = document.getElementById('folderDate');
@@ -23,7 +22,7 @@ const folderSelect = document.getElementById('folderSelect');
 
 const folderTableBody = document.getElementById('folderTableBody');
 
-// 1) جلب جميع الزبائن
+// 1) جلب الزبائن
 async function fetchAllCustomers() {
   try {
     const res = await fetch(`${BASE_URL}/api/customers`);
@@ -35,7 +34,7 @@ async function fetchAllCustomers() {
   }
 }
 
-// 2) جلب المجلدات اليومية
+// 2) جلب المجلدات
 async function fetchDailyFolders() {
   try {
     const res = await fetch(`${BASE_URL}/api/dailyfolders`);
@@ -48,7 +47,7 @@ async function fetchDailyFolders() {
   }
 }
 
-// 3) عرض المجلدات
+// 3) عرض المجلدات في الجدول
 function displayFolders() {
   folderTableBody.innerHTML = '';
   const grouped = {};
@@ -86,7 +85,7 @@ function displayFolders() {
       `;
       folderTableBody.appendChild(folderRow);
 
-      dailyFileCusts.forEach((cust) => {
+      dailyFileCusts.forEach(cust => {
         const custRow = document.createElement('tr');
         custRow.innerHTML = `
           <td colspan="2" style="padding-left:30px;">
@@ -153,16 +152,30 @@ async function deleteFolder(folderIndex) {
   }
 }
 
-// 6) تنزيل الملفات: استدعاء المسار /download-customers-zips مع مصفوفة filePaths
+// 6) تنزيل جميع الملفات في المجلد
 async function downloadFolder(folderDate, folderName) {
   try {
-    // مثال افتراضي على الملفات الموجودة فعلياً في uploads/<folderName>/
-    // يجب أن تضمن أن هذه الملفات موجودة فعليًا عندك
-    const filePaths = [
-      `uploads/${folderName}/sample1.pdf`,
-      `uploads/${folderName}/sample2.png`
-    ];
+    // ابحث عن كائن المجلد بناءً على name/date
+    const theFolder = dailyFolders.find(f => f.name === folderName && f.date === folderDate);
+    if (!theFolder) {
+      alert('لم يتم العثور على هذا المجلد!');
+      return;
+    }
+    // نستخرج العملاء بحالة dailyFile
+    const dailyFileCusts = (theFolder.customers || []).filter(c => c.status === 'dailyFile');
 
+    // نجمع مسارات الملفات من حقل zipName (مثلاً) لكل عميل
+    // يجب أن تكون zipName مسارًا صحيحًا في مجلد uploads
+    const filePaths = dailyFileCusts
+      .map(c => c.zipName)  // نفترض أنك تحفظ المسار في c.zipName عند رفع الملف
+      .filter(fp => fp);    // إزالة null/undefined
+
+    if (filePaths.length === 0) {
+      alert('لا توجد ملفات لدى هذا المجلد!');
+      return;
+    }
+
+    // استدعاء السيرفر /download-customers-zips
     const res = await fetch(`${BASE_URL}/download-customers-zips`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -173,15 +186,14 @@ async function downloadFolder(folderDate, folderName) {
       throw new Error('فشل إنشاء الملف المضغوط');
     }
 
-    // نحصل على Blob
+    // استقبال الـzip كـBlob
     const blob = await res.blob();
 
-    // ننشئ رابطًا مؤقتًا للتحميل
+    // إنشاء رابط مؤقت للتحميل
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    // اسم الملف النهائي:
-    a.download = `${folderName}.zip`;
+    a.download = `${folderName}.zip`; // اسم الملف الناتج
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -215,6 +227,7 @@ async function moveCustomerToPrinting(custId) {
       body: JSON.stringify(updated)
     });
     if (!res.ok) throw new Error('فشل تعديل حالة الزبون');
+
     await fetchAllCustomers();
     await fetchDailyFolders();
   } catch (err) {
@@ -223,7 +236,7 @@ async function moveCustomerToPrinting(custId) {
   }
 }
 
-// 8) إضافة مجلد جديد
+// 8) إضافة مجلد
 async function addFolder(name, date) {
   try {
     const newFolder = { name, date };
@@ -241,7 +254,7 @@ async function addFolder(name, date) {
   }
 }
 
-// 9) إضافة زبون إلى مجلد
+// 9) إضافة زبون إلى المجلد
 async function addCustomerToFolder(folderIndex, custObj) {
   try {
     await fetch(`${BASE_URL}/api/dailyfolders/${folderIndex}/add-customer`, {
@@ -256,7 +269,7 @@ async function addCustomerToFolder(folderIndex, custObj) {
   }
 }
 
-// الأحداث
+// عند إرسال النموذج لإضافة مجلد
 addFolderForm.addEventListener('submit', (e) => {
   e.preventDefault();
   const name = folderNameInput.value.trim();
@@ -273,6 +286,7 @@ addFolderForm.addEventListener('submit', (e) => {
   addFolderForm.reset();
 });
 
+// عند إرسال نموذج إضافة زبون للمجلد
 addCustomerToFolderForm.addEventListener('submit', (e) => {
   e.preventDefault();
   const custIdx = parseInt(customerSelect.value, 10);
@@ -312,6 +326,7 @@ function updateFolderSelect() {
   });
 }
 
+// عند التحميل الأولي
 (async function initPage() {
   await fetchAllCustomers();
   await fetchDailyFolders();

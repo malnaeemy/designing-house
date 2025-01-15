@@ -1,14 +1,14 @@
 /************************************************************
- server.js (معدّل وكامل مع المهام tasks)
- - يُقدّم الملفات الثابتة (HTML, CSS, JS) بعد التحقق من الجلسة
- - يرفع الملفات المضغوطة (POST /upload-zip)
- - يولّد ملفات مضغوطة عند الطلب (POST /download-customers-zips)
+ server.js (معدّل وكامل)
+ - يقدّم الملفات الثابتة (HTML, CSS, JS) بعد التحقق من الجلسة
+ - رفع الملفات المضغوطة (POST /upload-zip)
+ - يُنشئ ملف مضغوط عند الطلب (POST /download-customers-zips)
  - يدير الزبائن (customers) والمجلدات (dailyFolders)
  - يمكّن التذكيرات (reminders)
  - يستخدم id كمعرّف رئيسي للزبون
  - أضفنا folderName عند وضع الزبون في مجلد
  - أضفنا نظام تسجيل دخول بسيط (admin, Engsamar)
- - أضفنا منطق orders (تخزين الطلبات) + /api/orders
+ - أضفنا منطق orders + مسار /api/orders
  - أضفنا /api/reports لعرض الزبائن المتكررين وغير النشطين
  - أضفنا /api/tasks لإدارة المهام
 *************************************************************/
@@ -20,13 +20,12 @@ const path = require('path');
 const fs = require('fs');
 const archiver = require('archiver');
 
-/* 1) إضافة مكتبة الجلسات */
 const session = require('express-session');
 
 const app = express();
 const PORT = process.env.PORT || 3003;
 
-/* 2) مستخدمان فقط مصرح لهما بالدخول */
+/* 1) مستخدمان فقط مصرح لهما بالدخول */
 const validUsers = [
   { username: 'malnaeemy', password: '0991481846' },
   { username: 'Engsamar', password: '19931028' }
@@ -66,29 +65,22 @@ app.get('/logout', (req, res) => {
   });
 });
 
-/* 3) مسار ثابت لصفحة login.html */
+/* مسار ثابت لصفحة login.html */
 app.use('/login.html', express.static(path.join(__dirname, 'login.html')));
 
-/* 4) ميدل وير يتحقق من الجلسة لأي طلب آخر */
+/* فاصل التحقق من الجلسة */
 app.use((req, res, next) => {
-  if (req.session.loggedIn) {
-    return next();
-  }
-  const allowList = [
-    '/login',
-    '/login.html'
-  ];
-  if (allowList.includes(req.url)) {
-    return next();
-  }
+  if (req.session.loggedIn) return next();
+  const allowList = ['/login', '/login.html'];
+  if (allowList.includes(req.url)) return next();
   return res.redirect('/login.html');
 });
 
-/* 5) تقديم الملفات الثابتة */
+/* تقديم الملفات الثابتة */
 app.use(cors());
 app.use(express.static(path.join(__dirname)));
 
-/* ============= دوال قراءة/كتابة data.json ============= */
+/* دوال قراءة/كتابة data.json */
 function loadDataFromJson() {
   try {
     const raw = fs.readFileSync(path.join(__dirname, 'data.json'), 'utf8');
@@ -159,8 +151,7 @@ app.post('/upload-zip', (req, res) => {
 app.post('/download-customers-zips', async (req, res) => {
   try {
     const filePaths = req.body.filePaths || [];
-    // سنرسل الملف كمرفق (Attachment).
-    // res.attachment يُهيئ الـheaders لجعل الاستجابة قابلة للتنزيل
+    // نرسل الملف كمرفق Attachment
     res.attachment('customers-files.zip');
 
     const archive = archiver('zip', { zlib: { level: 9 } });
@@ -168,14 +159,9 @@ app.post('/download-customers-zips', async (req, res) => {
       console.error('Archiver error:', err);
       res.status(500).send('Error creating zip');
     });
-
-    // وصّل الـarchive بتدفق الاستجابة
     archive.pipe(res);
 
-    // أضف الملفات
     for (const fp of filePaths) {
-      // fp هو مسار نسبي موجود في مجلد uploads
-      // يمكن التحقق من وجود الملف:
       if (fs.existsSync(fp)) {
         archive.file(fp, { name: path.basename(fp) });
       } else {
@@ -183,7 +169,6 @@ app.post('/download-customers-zips', async (req, res) => {
       }
     }
 
-    // إغلاق الأرشيف
     await archive.finalize();
   } catch (err) {
     console.error('Error creating zip:', err);
@@ -215,7 +200,7 @@ app.delete('/api/customers/:id', (req, res) => {
     return res.status(404).json({ error: 'Customer not found' });
   }
   const deleted = customers.splice(index, 1)[0];
-  // نحذف من dailyFolders
+  // نحذف الزبون من dailyFolders أيضًا
   dailyFolders.forEach(folder => {
     folder.customers = folder.customers.filter(cc => cc.id !== id);
   });
@@ -237,6 +222,7 @@ app.put('/api/customers/:id', (req, res) => {
   customers[idx] = { ...customers[idx], ...req.body };
   const newStatus = customers[idx].status;
 
+  // إن خرج من dailyFile => نحذفه من المجلد
   if (oldStatus === 'dailyFile' && newStatus !== 'dailyFile') {
     dailyFolders.forEach(folder => {
       folder.customers = folder.customers.filter(c => c.id !== id);
@@ -306,6 +292,7 @@ app.put('/api/dailyfolders/:folderIndex/add-customer', (req, res) => {
   }
 
   customers[custIdx].status = 'dailyFile';
+  // نسجل النشاط
   if (!customers[custIdx].activityLog) {
     customers[custIdx].activityLog = [];
   }
@@ -314,8 +301,11 @@ app.put('/api/dailyfolders/:folderIndex/add-customer', (req, res) => {
     action: 'تغيير الحالة إلى dailyFile'
   });
 
+  // نحفظ اسم المجلد
   customers[custIdx].folderName = dailyFolders[fIdx].name;
+  // أضف نسخة من هذا الزبون إلى مصفوفة folder.customers
   dailyFolders[fIdx].customers.push({ ...customers[custIdx] });
+
   saveDataToJson(customers, dailyFolders, reminders, orders, tasks);
   res.json({
     message: 'Customer added to folder',
@@ -323,7 +313,7 @@ app.put('/api/dailyfolders/:folderIndex/add-customer', (req, res) => {
   });
 });
 
-/* ============= مسارات reminders (التذكير) ============= */
+/* ============= مسارات reminders ============= */
 app.get('/api/reminders', (req, res) => {
   res.json(reminders);
 });
@@ -362,7 +352,6 @@ app.put('/api/reminders/:id', (req, res) => {
 /* ============= منطق الطلبات (Orders) ============= */
 app.post('/api/orders', (req, res) => {
   const { customerId, orderType, date } = req.body;
-
   const cIndex = customers.findIndex(c => c.id === Number(customerId));
   if (cIndex === -1) {
     return res.status(404).json({ error: 'الزبون غير موجود!' });
@@ -379,7 +368,6 @@ app.post('/api/orders', (req, res) => {
   };
 
   orders.push(newOrder);
-
   saveDataToJson(customers, dailyFolders, reminders, orders, tasks);
   console.log('New order added:', newOrder);
   return res.status(201).json({ message: 'تم إضافة الطلب', order: newOrder });
@@ -482,7 +470,7 @@ app.get('/', (req, res) => {
   res.send('مرحباً! لقد سجلت الدخول بنجاح، ويمكنك الوصول لباقي الصفحات الآن.');
 });
 
-/* بدء الخادم */
+/* بدء الخادم على المنفذ (PORT) */
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
