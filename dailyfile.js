@@ -3,8 +3,7 @@
   - يعرض/ينشئ مجلدات اليوم (dailyFolders) من السيرفر
   - إضافة زبون إلى المجلد (تغيير حالته إلى dailyFile)
   - نقل الزبون من dailyFile إلى inPrinting
-  - يستخدم id
-  - يمكن عرض folderName
+  - ينفذ تنزيلًا حقيقيًا لملفات عبر /download-customers-zips
 ***************************************************************/
 
 /* استبدل هذا بعنوان موقعك على Railway */
@@ -154,9 +153,44 @@ async function deleteFolder(folderIndex) {
   }
 }
 
-// 6) مثال لتنزيل الملفات
+// 6) تنزيل الملفات: استدعاء المسار /download-customers-zips مع مصفوفة filePaths
 async function downloadFolder(folderDate, folderName) {
-  alert(`تحميل ملفات المجلد [${folderName}] بتاريخ [${folderDate}]`);
+  try {
+    // مثال افتراضي على الملفات الموجودة فعلياً في uploads/<folderName>/
+    // يجب أن تضمن أن هذه الملفات موجودة فعليًا عندك
+    const filePaths = [
+      `uploads/${folderName}/sample1.pdf`,
+      `uploads/${folderName}/sample2.png`
+    ];
+
+    const res = await fetch(`${BASE_URL}/download-customers-zips`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ filePaths })
+    });
+
+    if (!res.ok) {
+      throw new Error('فشل إنشاء الملف المضغوط');
+    }
+
+    // نحصل على Blob
+    const blob = await res.blob();
+
+    // ننشئ رابطًا مؤقتًا للتحميل
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    // اسم الملف النهائي:
+    a.download = `${folderName}.zip`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+
+  } catch (err) {
+    console.error(err);
+    alert('حدث خطأ أثناء تنزيل الملفات');
+  }
 }
 
 // 7) نقل الزبون إلى قيد الطبع
@@ -222,7 +256,7 @@ async function addCustomerToFolder(folderIndex, custObj) {
   }
 }
 
-// استماع للفورمات
+// الأحداث
 addFolderForm.addEventListener('submit', (e) => {
   e.preventDefault();
   const name = folderNameInput.value.trim();

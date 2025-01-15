@@ -1,17 +1,16 @@
 /************************************************************
  server.js (معدّل وكامل مع المهام tasks)
- خادم محلي باستخدام Node.js + Express + Multer + Archiver
- - يقدّم الملفات الثابتة (HTML, CSS, JS) بعد التحقق من الجلسة
+ - يُقدّم الملفات الثابتة (HTML, CSS, JS) بعد التحقق من الجلسة
  - يرفع الملفات المضغوطة (POST /upload-zip)
  - يولّد ملفات مضغوطة عند الطلب (POST /download-customers-zips)
  - يدير الزبائن (customers) والمجلدات (dailyFolders)
  - يمكّن التذكيرات (reminders)
  - يستخدم id كمعرّف رئيسي للزبون
  - أضفنا folderName عند وضع الزبون في مجلد
- - أضفنا نظام تسجيل دخول بسيط لمستخدمين admin و Engsamar (أو غيرهما)
- - أضفنا منطق orders (تخزين الطلبات) + مسار /api/orders
+ - أضفنا نظام تسجيل دخول بسيط (admin, Engsamar)
+ - أضفنا منطق orders (تخزين الطلبات) + /api/orders
  - أضفنا /api/reports لعرض الزبائن المتكررين وغير النشطين
- - تم إضافة /api/tasks لإدارة المهام
+ - أضفنا /api/tasks لإدارة المهام
 *************************************************************/
 
 const express = require('express');
@@ -25,7 +24,6 @@ const archiver = require('archiver');
 const session = require('express-session');
 
 const app = express();
-/* قراءة المنفذ من process.env.PORT وإلا 3003 */
 const PORT = process.env.PORT || 3003;
 
 /* 2) مستخدمان فقط مصرح لهما بالدخول */
@@ -56,13 +54,12 @@ app.post('/login', (req, res) => {
   if (!found) {
     return res.status(401).json({ error: 'اسم المستخدم أو كلمة المرور خاطئة' });
   }
-  // نجعل المستخدم "مسجل دخول" في الجلسة
   req.session.loggedIn = true;
   req.session.username = username;
   res.json({ message: 'تم تسجيل الدخول بنجاح' });
 });
 
-/* مسار تسجيل الخروج (اختياري) */
+/* مسار تسجيل الخروج */
 app.get('/logout', (req, res) => {
   req.session.destroy(() => {
     res.redirect('/login.html');
@@ -74,23 +71,20 @@ app.use('/login.html', express.static(path.join(__dirname, 'login.html')));
 
 /* 4) ميدل وير يتحقق من الجلسة لأي طلب آخر */
 app.use((req, res, next) => {
-  // السماح إذا كان المستخدم مسجَّل دخوله
   if (req.session.loggedIn) {
     return next();
   }
-  // السماح لمسار /login (POST) ولصفحة /login.html فقط
   const allowList = [
-    '/login',     // POST
-    '/login.html' // GET
+    '/login',
+    '/login.html'
   ];
   if (allowList.includes(req.url)) {
     return next();
   }
-  // إن لم يكن مسجلاً دخوله: إعادة توجيه
   return res.redirect('/login.html');
 });
 
-/* 5) تقديم الملفات الثابتة (HTML, CSS, JS) للمستخدم المسجل */
+/* 5) تقديم الملفات الثابتة */
 app.use(cors());
 app.use(express.static(path.join(__dirname)));
 
@@ -134,7 +128,7 @@ function saveDataToJson(customers, dailyFolders, reminders, orders, tasks) {
 /* تحميل البيانات عند بدء الخادم */
 let { customers, dailyFolders, reminders, orders, tasks } = loadDataFromJson();
 
-/* ------------- رفع ملف مضغوط ------------- */
+/* ============= رفع ملف مضغوط ============= */
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, 'uploads');
@@ -161,18 +155,35 @@ app.post('/upload-zip', (req, res) => {
   });
 });
 
-/* ----------- توليد ملف مضغوط من قائمة filePaths ----------- */
+/* ============= توليد ملف مضغوط من قائمة filePaths ============= */
 app.post('/download-customers-zips', async (req, res) => {
   try {
     const filePaths = req.body.filePaths || [];
+    // سنرسل الملف كمرفق (Attachment).
+    // res.attachment يُهيئ الـheaders لجعل الاستجابة قابلة للتنزيل
     res.attachment('customers-files.zip');
 
     const archive = archiver('zip', { zlib: { level: 9 } });
+    archive.on('error', (err) => {
+      console.error('Archiver error:', err);
+      res.status(500).send('Error creating zip');
+    });
+
+    // وصّل الـarchive بتدفق الاستجابة
     archive.pipe(res);
 
+    // أضف الملفات
     for (const fp of filePaths) {
-      archive.file(fp, { name: path.basename(fp) });
+      // fp هو مسار نسبي موجود في مجلد uploads
+      // يمكن التحقق من وجود الملف:
+      if (fs.existsSync(fp)) {
+        archive.file(fp, { name: path.basename(fp) });
+      } else {
+        console.warn('File not found:', fp);
+      }
     }
+
+    // إغلاق الأرشيف
     await archive.finalize();
   } catch (err) {
     console.error('Error creating zip:', err);
@@ -180,7 +191,7 @@ app.post('/download-customers-zips', async (req, res) => {
   }
 });
 
-/* ------------- مسارات الزبائن (customers) ------------- */
+/* ============= مسارات customers ============= */
 app.get('/api/customers', (req, res) => {
   res.json(customers);
 });
@@ -204,7 +215,7 @@ app.delete('/api/customers/:id', (req, res) => {
     return res.status(404).json({ error: 'Customer not found' });
   }
   const deleted = customers.splice(index, 1)[0];
-  // احذفه أيضاً من dailyFolders
+  // نحذف من dailyFolders
   dailyFolders.forEach(folder => {
     folder.customers = folder.customers.filter(cc => cc.id !== id);
   });
@@ -239,7 +250,7 @@ app.put('/api/customers/:id', (req, res) => {
   });
 });
 
-/* -------------- مسارات dailyFolders -------------- */
+/* ============= مسارات dailyFolders ============= */
 app.get('/api/dailyfolders', (req, res) => {
   res.json(dailyFolders);
 });
@@ -312,7 +323,7 @@ app.put('/api/dailyfolders/:folderIndex/add-customer', (req, res) => {
   });
 });
 
-/* -------------- مسارات reminders (التذكير) -------------- */
+/* ============= مسارات reminders (التذكير) ============= */
 app.get('/api/reminders', (req, res) => {
   res.json(reminders);
 });
@@ -348,7 +359,7 @@ app.put('/api/reminders/:id', (req, res) => {
   res.json({ message: 'Reminder updated', reminder: reminders[idx] });
 });
 
-/* ============== منطق الطلبات (Orders) ============== */
+/* ============= منطق الطلبات (Orders) ============= */
 app.post('/api/orders', (req, res) => {
   const { customerId, orderType, date } = req.body;
 
@@ -370,12 +381,11 @@ app.post('/api/orders', (req, res) => {
   orders.push(newOrder);
 
   saveDataToJson(customers, dailyFolders, reminders, orders, tasks);
-
   console.log('New order added:', newOrder);
   return res.status(201).json({ message: 'تم إضافة الطلب', order: newOrder });
 });
 
-/* ============== مسار التقارير (Reports) ============== */
+/* ============= مسار التقارير (Reports) ============= */
 app.get('/api/reports', (req, res) => {
   try {
     const orderCountMap = {};
@@ -399,10 +409,7 @@ app.get('/api/reports', (req, res) => {
       .map(cust => {
         const cId = cust.id;
         const count = orderCountMap[cId] || 0;
-        return {
-          ...cust,
-          orderCount: count
-        };
+        return { ...cust, orderCount: count };
       })
       .filter(c => c.orderCount > 1)
       .sort((a, b) => b.orderCount - a.orderCount);
@@ -426,7 +433,7 @@ app.get('/api/reports', (req, res) => {
   }
 });
 
-/* ============== منطق المهام (Tasks) ============== */
+/* ============= منطق المهام (Tasks) ============= */
 app.get('/api/tasks', (req, res) => {
   res.json(tasks);
 });
@@ -445,7 +452,6 @@ app.post('/api/tasks', (req, res) => {
   tasks.push(newTask);
 
   saveDataToJson(customers, dailyFolders, reminders, orders, tasks);
-
   res.status(201).json({ message: 'تمت إضافة المهمة', task: newTask });
 });
 
@@ -455,10 +461,8 @@ app.put('/api/tasks/:id', (req, res) => {
   if (idx === -1) {
     return res.status(404).json({ error: 'المهمة غير موجودة!' });
   }
-
   tasks[idx] = { ...tasks[idx], ...req.body };
   saveDataToJson(customers, dailyFolders, reminders, orders, tasks);
-
   res.json({ message: 'تم تحديث المهمة', task: tasks[idx] });
 });
 
@@ -470,7 +474,6 @@ app.delete('/api/tasks/:id', (req, res) => {
   }
   const removed = tasks.splice(idx, 1)[0];
   saveDataToJson(customers, dailyFolders, reminders, orders, tasks);
-
   res.json({ message: 'تم حذف المهمة', task: removed });
 });
 
@@ -479,7 +482,7 @@ app.get('/', (req, res) => {
   res.send('مرحباً! لقد سجلت الدخول بنجاح، ويمكنك الوصول لباقي الصفحات الآن.');
 });
 
-/* بدء الخادم على المنفذ (PORT) من البيئة أو 3003 */
+/* بدء الخادم */
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
