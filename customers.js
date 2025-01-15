@@ -1,9 +1,9 @@
 /***********************************************************
   customers.js (مُعدَّل)
   - يعتمد الآن على الخادم بدلًا من Local Storage
-  - رفع الملف المضغوط ما زال عبر /upload-zip
+  - رفع الملف المضغوط عبر /upload-zip على سيرفرك في Railway
   - إضافة/جلب/حذف/تعديل الزبائن عبر /api/customers
-  - الإصلاح: استدعاء المسار بالحقل id بدل phone عند الحذف
+  - استخدام id عند الحذف (بدل phone)
 ***********************************************************/
 
 /* استبدل هذا بعنوان موقعك على Railway */
@@ -22,40 +22,41 @@ let customers = [];
 
 // متغيّرات لإدارة الملف المضغوط
 let selectedFolderFiles = [];
-let finalZipName = '';
+let finalZipName = "";
 
 /**
  * 1) دالة لجلب قائمة الزبائن من السيرفر
  */
 async function fetchCustomers() {
   try {
+    // نستخدم BASE_URL بدلاً من "http://localhost:3003"
     const res = await fetch(`${BASE_URL}/api/customers`);
-    customers = await res.json(); 
-    displayCustomers(); 
+    customers = await res.json();
+    displayCustomers();
   } catch (err) {
-    console.error('Error fetching customers:', err);
-    alert('تعذّر جلب الزبائن من السيرفر');
+    console.error("Error fetching customers:", err);
+    alert("تعذّر جلب الزبائن من السيرفر");
   }
 }
 
 /**
  * 2) دالة لعرض الزبائن (فقط من حالتهم "notDistributed")
- *    يمكن استلام قائمة مفلترة لعرضها، وإلّا يتم عرض القائمة الرئيسية
+ *    يمكن استلام قائمة مفلترة (list) أو استخدام القائمة الرئيسية (customers)
  */
 function displayCustomers(list) {
   const baseList = list || customers;
-  const filteredList = baseList.filter(c => c.status === 'notDistributed');
+  const filteredList = baseList.filter((c) => c.status === "notDistributed");
 
-  customerTableBody.innerHTML = '';
+  customerTableBody.innerHTML = "";
 
   filteredList.forEach((cust, index) => {
-    const row = document.createElement('tr');
+    const row = document.createElement("tr");
     row.innerHTML = `
       <td>${cust.name}</td>
       <td>${cust.phone}</td>
-      <td>${cust.address || ''}</td>
-      <td>${cust.notes || ''}</td>
-      <td>${cust.zipName || ''}</td>
+      <td>${cust.address || ""}</td>
+      <td>${cust.notes || ""}</td>
+      <td>${cust.zipName || ""}</td>
       <td class="actions">
         <button class="edit-btn" onclick="editCustomer(${index})">تعديل</button>
         <button class="delete-btn" onclick="deleteCustomer(${index})">حذف</button>
@@ -77,26 +78,26 @@ async function addCustomer(name, phone, address, notes, zipName) {
       notes,
       zipName,
       status: "notDistributed",
-      activityLog: []
+      activityLog: [],
     };
 
     const res = await fetch(`${BASE_URL}/api/customers`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(newC)
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(newC),
     });
 
     if (!res.ok) {
-      throw new Error('فشل إضافة الزبون');
+      throw new Error("فشل إضافة الزبون");
     }
 
     const data = await res.json();
-    console.log('Customer added:', data);
+    console.log("Customer added:", data);
+    // بعد الإضافة، نجلب القائمة
     fetchCustomers();
-
   } catch (err) {
     console.error(err);
-    alert('تعذّر إضافة الزبون عبر السيرفر');
+    alert("تعذّر إضافة الزبون عبر السيرفر");
   }
 }
 
@@ -104,23 +105,27 @@ async function addCustomer(name, phone, address, notes, zipName) {
  * 4) دالة لحذف زبون عبر DELETE
  */
 async function deleteCustomer(index) {
-  const filteredList = customers.filter(c => c.status === "notDistributed");
+  // أولًا، نستخرج الزبائن الذين حالتهم notDistributed
+  const filteredList = customers.filter((c) => c.status === "notDistributed");
   const c = filteredList[index];
   if (!c) return;
 
   try {
+    // نستخدم c.id بدل c.phone
     const res = await fetch(`${BASE_URL}/api/customers/${c.id}`, {
-      method: 'DELETE'
+      method: "DELETE",
     });
     if (!res.ok) {
-      throw new Error('فشل حذف الزبون من السيرفر');
+      throw new Error("فشل حذف الزبون من السيرفر");
     }
     const data = await res.json();
-    console.log('Deleted:', data);
+    console.log("Deleted:", data);
+
+    // إعادة جلب قائمة الزبائن
     fetchCustomers();
   } catch (err) {
     console.error(err);
-    alert('تعذّر حذف الزبون');
+    alert("تعذّر حذف الزبون");
   }
 }
 
@@ -128,20 +133,21 @@ async function deleteCustomer(index) {
  * 5) دالة لتعديل الزبون (تستدعي PUT)
  */
 async function editCustomer(index) {
-  const filteredList = customers.filter(c => c.status === "notDistributed");
+  const filteredList = customers.filter((c) => c.status === "notDistributed");
   const oldC = filteredList[index];
   if (!oldC) return;
 
-  const mainIndex = customers.findIndex(x => x.id === oldC.id);
+  // نبحث عن الكائن في المصفوفة الأصلية
+  const mainIndex = customers.findIndex((x) => x.id === oldC.id);
   if (mainIndex === -1) return;
 
   const newName = prompt("اسم الزبون:", oldC.name);
   if (newName === null) return;
   const newPhone = prompt("رقم الهاتف:", oldC.phone);
   if (newPhone === null) return;
-  const newAddress = prompt("العنوان:", oldC.address || '');
+  const newAddress = prompt("العنوان:", oldC.address || "");
   if (newAddress === null) return;
-  const newNotes = prompt("الملاحظات:", oldC.notes || '');
+  const newNotes = prompt("الملاحظات:", oldC.notes || "");
   if (newNotes === null) return;
 
   const updatedC = {
@@ -149,108 +155,113 @@ async function editCustomer(index) {
     name: newName.trim(),
     phone: newPhone.trim(),
     address: newAddress.trim(),
-    notes: newNotes.trim()
+    notes: newNotes.trim(),
   };
 
   try {
     const res = await fetch(`${BASE_URL}/api/customers/${oldC.id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(updatedC)
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(updatedC),
     });
     if (!res.ok) {
-      throw new Error('فشل تعديل الزبون في السيرفر');
+      throw new Error("فشل تعديل الزبون في السيرفر");
     }
     const data = await res.json();
-    console.log('Edited:', data);
+    console.log("Edited:", data);
+
+    // بعد التعديل، أعد جلب القائمة
     fetchCustomers();
   } catch (err) {
     console.error(err);
-    alert('تعذّر تعديل الزبون');
+    alert("تعذّر تعديل الزبون");
   }
 }
 
 /**
  * 6) الاستماع لإرسال نموذج إضافة زبون
  */
-addCustomerForm.addEventListener('submit', (e) => {
+addCustomerForm.addEventListener("submit", (e) => {
   e.preventDefault();
-  const name = document.getElementById('customerName').value.trim();
-  const phone = document.getElementById('customerPhone').value.trim();
-  const address = document.getElementById('customerAddress').value.trim();
-  const notes = document.getElementById('customerNotes').value.trim();
+  const name = document.getElementById("customerName").value.trim();
+  const phone = document.getElementById("customerPhone").value.trim();
+  const address = document.getElementById("customerAddress").value.trim();
+  const notes = document.getElementById("customerNotes").value.trim();
 
   addCustomer(name, phone, address, notes, finalZipName);
 
   addCustomerForm.reset();
   selectedFolderFiles = [];
-  finalZipName = '';
-  uploadZipBtn.style.display = 'none';
+  finalZipName = "";
+  uploadZipBtn.style.display = "none";
 });
 
-/* زر اختيار مجلد (لرفع الملف المضغوط) */
-selectFolderBtn.addEventListener('click', () => {
+/**
+ * زر اختيار مجلد (لرفع الملف المضغوط)
+ */
+selectFolderBtn.addEventListener("click", () => {
   folderInput.click();
 });
 
-folderInput.addEventListener('change', (e) => {
+folderInput.addEventListener("change", (e) => {
   selectedFolderFiles = Array.from(e.target.files);
   if (selectedFolderFiles.length > 0) {
-    uploadZipBtn.style.display = 'inline-block';
+    uploadZipBtn.style.display = "inline-block";
   }
 });
 
 /**
  * زر "ضغط الملف" ورفعه
  */
-uploadZipBtn.addEventListener('click', async () => {
+uploadZipBtn.addEventListener("click", async () => {
   if (selectedFolderFiles.length === 0) return;
   const zip = new JSZip();
-  let folderName = '';
+  let folderName = "";
 
   for (let file of selectedFolderFiles) {
-    const pathParts = file.webkitRelativePath.split('/');
+    const pathParts = file.webkitRelativePath.split("/");
     folderName = pathParts[0];
     const arrayBuffer = await file.arrayBuffer();
     const relativePath = file.webkitRelativePath;
     zip.file(relativePath, arrayBuffer);
   }
 
-  finalZipName = folderName + '.zip';
-  const zipBlob = await zip.generateAsync({ type: 'blob' });
+  finalZipName = folderName + ".zip";
+  const zipBlob = await zip.generateAsync({ type: "blob" });
   const formData = new FormData();
-  formData.append('zipfile', zipBlob, finalZipName);
+  formData.append("zipfile", zipBlob, finalZipName);
 
   try {
     const res = await fetch(`${BASE_URL}/upload-zip`, {
-      method: 'POST',
-      body: formData
+      method: "POST",
+      body: formData,
     });
     const data = await res.json();
     if (res.ok) {
-      alert(data.message + '\nالمسار: ' + data.filePath);
+      alert(data.message + "\nالمسار: " + data.filePath);
       finalZipName = data.filePath;
     } else {
-      alert(data.error || 'حدث خطأ في الرفع');
+      alert(data.error || "حدث خطأ في الرفع");
     }
   } catch (err) {
     console.error(err);
-    alert('تعذّر الاتصال بالخادم');
+    alert("تعذّر الاتصال بالخادم");
   }
-  uploadZipBtn.style.display = 'none';
+  uploadZipBtn.style.display = "none";
 });
 
 /**
  * البحث في قائمة الزبائن
  */
-searchInput.addEventListener('input', () => {
+searchInput.addEventListener("input", () => {
   const val = searchInput.value.toLowerCase();
-  const filtered = customers.filter(c =>
-    c.status === "notDistributed" &&
-    (c.name.toLowerCase().includes(val) ||
-     c.phone.includes(val) ||
-     (c.address && c.address.includes(val)) ||
-     (c.notes && c.notes.includes(val)))
+  const filtered = customers.filter(
+    (c) =>
+      c.status === "notDistributed" &&
+      (c.name.toLowerCase().includes(val) ||
+        c.phone.includes(val) ||
+        (c.address && c.address.includes(val)) ||
+        (c.notes && c.notes.includes(val)))
   );
   displayCustomers(filtered);
 });
