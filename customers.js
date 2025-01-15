@@ -1,7 +1,7 @@
 /***********************************************************
   customers.js (مُعدَّل)
-  - يعتمد الآن على الخادم بدلًا من Local Storage
-  - رفع الملف المضغوط عبر /upload-zip على سيرفرك في Railway
+  - يعتمد على الخادم بدلًا من Local Storage
+  - رفع الملف المضغوط عبر /upload-zip على السيرفر
   - إضافة/جلب/حذف/تعديل الزبائن عبر /api/customers
   - استخدام id عند الحذف (بدل phone)
 ***********************************************************/
@@ -22,14 +22,13 @@ let customers = [];
 
 // متغيّرات لإدارة الملف المضغوط
 let selectedFolderFiles = [];
-let finalZipName = "";
+let finalZipName = "";  // سنضع هنا المسار الذي يعيدُه السيرفر بعد الرفع
 
 /**
  * 1) دالة لجلب قائمة الزبائن من السيرفر
  */
 async function fetchCustomers() {
   try {
-    // نستخدم BASE_URL بدلاً من "http://localhost:3003"
     const res = await fetch(`${BASE_URL}/api/customers`);
     customers = await res.json();
     displayCustomers();
@@ -41,7 +40,6 @@ async function fetchCustomers() {
 
 /**
  * 2) دالة لعرض الزبائن (فقط من حالتهم "notDistributed")
- *    يمكن استلام قائمة مفلترة (list) أو استخدام القائمة الرئيسية (customers)
  */
 function displayCustomers(list) {
   const baseList = list || customers;
@@ -56,7 +54,7 @@ function displayCustomers(list) {
       <td>${cust.phone}</td>
       <td>${cust.address || ""}</td>
       <td>${cust.notes || ""}</td>
-      <td>${cust.zipName || ""}</td>
+      <td>${cust.zipName || ""}</td> <!-- المسار الذي رفعناه -->
       <td class="actions">
         <button class="edit-btn" onclick="editCustomer(${index})">تعديل</button>
         <button class="delete-btn" onclick="deleteCustomer(${index})">حذف</button>
@@ -76,7 +74,7 @@ async function addCustomer(name, phone, address, notes, zipName) {
       phone,
       address,
       notes,
-      zipName,
+      zipName,  // <-- هنا نخزّن المسار القادم من الرفع
       status: "notDistributed",
       activityLog: [],
     };
@@ -93,7 +91,7 @@ async function addCustomer(name, phone, address, notes, zipName) {
 
     const data = await res.json();
     console.log("Customer added:", data);
-    // بعد الإضافة، نجلب القائمة
+    // بعد الإضافة، نجلب القائمة مجددًا
     fetchCustomers();
   } catch (err) {
     console.error(err);
@@ -105,13 +103,11 @@ async function addCustomer(name, phone, address, notes, zipName) {
  * 4) دالة لحذف زبون عبر DELETE
  */
 async function deleteCustomer(index) {
-  // أولًا، نستخرج الزبائن الذين حالتهم notDistributed
   const filteredList = customers.filter((c) => c.status === "notDistributed");
   const c = filteredList[index];
   if (!c) return;
 
   try {
-    // نستخدم c.id بدل c.phone
     const res = await fetch(`${BASE_URL}/api/customers/${c.id}`, {
       method: "DELETE",
     });
@@ -120,8 +116,6 @@ async function deleteCustomer(index) {
     }
     const data = await res.json();
     console.log("Deleted:", data);
-
-    // إعادة جلب قائمة الزبائن
     fetchCustomers();
   } catch (err) {
     console.error(err);
@@ -130,14 +124,13 @@ async function deleteCustomer(index) {
 }
 
 /**
- * 5) دالة لتعديل الزبون (تستدعي PUT)
+ * 5) دالة لتعديل الزبون (PUT)
  */
 async function editCustomer(index) {
   const filteredList = customers.filter((c) => c.status === "notDistributed");
   const oldC = filteredList[index];
   if (!oldC) return;
 
-  // نبحث عن الكائن في المصفوفة الأصلية
   const mainIndex = customers.findIndex((x) => x.id === oldC.id);
   if (mainIndex === -1) return;
 
@@ -170,7 +163,6 @@ async function editCustomer(index) {
     const data = await res.json();
     console.log("Edited:", data);
 
-    // بعد التعديل، أعد جلب القائمة
     fetchCustomers();
   } catch (err) {
     console.error(err);
@@ -188,6 +180,7 @@ addCustomerForm.addEventListener("submit", (e) => {
   const address = document.getElementById("customerAddress").value.trim();
   const notes = document.getElementById("customerNotes").value.trim();
 
+  // نمرر finalZipName في الحقل الخامس
   addCustomer(name, phone, address, notes, finalZipName);
 
   addCustomerForm.reset();
@@ -197,7 +190,7 @@ addCustomerForm.addEventListener("submit", (e) => {
 });
 
 /**
- * زر اختيار مجلد (لرفع الملف المضغوط)
+ * زر اختيار مجلد (لاختيار ملفات /upload)
  */
 selectFolderBtn.addEventListener("click", () => {
   folderInput.click();
@@ -212,6 +205,10 @@ folderInput.addEventListener("change", (e) => {
 
 /**
  * زر "ضغط الملف" ورفعه
+ * - نستخدم JSZip لإنشاء zip
+ * - نرفعه إلى السيرفر
+ * - السيرفر يعيد filePath
+ * - نحفظه في finalZipName
  */
 uploadZipBtn.addEventListener("click", async () => {
   if (selectedFolderFiles.length === 0) return;
@@ -238,7 +235,9 @@ uploadZipBtn.addEventListener("click", async () => {
     });
     const data = await res.json();
     if (res.ok) {
+      // المعاد: data.filePath
       alert(data.message + "\nالمسار: " + data.filePath);
+      // نضع هذا المسار في finalZipName كي نرسله عند إنشاء الزبون
       finalZipName = data.filePath;
     } else {
       alert(data.error || "حدث خطأ في الرفع");

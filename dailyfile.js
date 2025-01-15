@@ -85,7 +85,7 @@ function displayFolders() {
       `;
       folderTableBody.appendChild(folderRow);
 
-      dailyFileCusts.forEach(cust => {
+      dailyFileCusts.forEach((cust) => {
         const custRow = document.createElement('tr');
         custRow.innerHTML = `
           <td colspan="2" style="padding-left:30px;">
@@ -155,27 +155,24 @@ async function deleteFolder(folderIndex) {
 // 6) تنزيل جميع الملفات في المجلد
 async function downloadFolder(folderDate, folderName) {
   try {
-    // ابحث عن كائن المجلد بناءً على name/date
     const theFolder = dailyFolders.find(f => f.name === folderName && f.date === folderDate);
     if (!theFolder) {
       alert('لم يتم العثور على هذا المجلد!');
       return;
     }
-    // نستخرج العملاء بحالة dailyFile
     const dailyFileCusts = (theFolder.customers || []).filter(c => c.status === 'dailyFile');
 
-    // نجمع مسارات الملفات من حقل zipName (مثلاً) لكل عميل
-    // يجب أن تكون zipName مسارًا صحيحًا في مجلد uploads
+    // نجمع مسارات zipName
     const filePaths = dailyFileCusts
-      .map(c => c.zipName)  // نفترض أنك تحفظ المسار في c.zipName عند رفع الملف
-      .filter(fp => fp);    // إزالة null/undefined
+      .map(c => c.zipName)  // <-- المسار المخزَّن عند إضافة الزبون
+      .filter(fp => fp);
 
     if (filePaths.length === 0) {
       alert('لا توجد ملفات لدى هذا المجلد!');
       return;
     }
 
-    // استدعاء السيرفر /download-customers-zips
+    // استدعاء السيرفر
     const res = await fetch(`${BASE_URL}/download-customers-zips`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -186,14 +183,11 @@ async function downloadFolder(folderDate, folderName) {
       throw new Error('فشل إنشاء الملف المضغوط');
     }
 
-    // استقبال الـzip كـBlob
     const blob = await res.blob();
-
-    // إنشاء رابط مؤقت للتحميل
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${folderName}.zip`; // اسم الملف الناتج
+    a.download = `${folderName}.zip`;
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -286,7 +280,6 @@ addFolderForm.addEventListener('submit', (e) => {
   addFolderForm.reset();
 });
 
-// عند إرسال نموذج إضافة زبون للمجلد
 addCustomerToFolderForm.addEventListener('submit', (e) => {
   e.preventDefault();
   const custIdx = parseInt(customerSelect.value, 10);
